@@ -19,12 +19,12 @@ def profile(func):
     return wrapper
 
 
-async def main(key,  meteo):
+async def main(key, meteo):
     # async with pool.acquire() as con:
-        # await del_table(con, "meteo_data")
-        # await create_meteo_data(con)
-        for val in key.split():
-            await meteo.fetch(*list(map(int, val.split(','))))
+    # await del_table(con, "meteo_data")
+    # await create_meteo_data(con)
+    for val in key.split():
+        await meteo.fetch(*list(map(int, val.split(','))))
 
 
 async def get_pool():
@@ -32,32 +32,36 @@ async def get_pool():
                                      port="5432")
     async with pool.acquire() as con:
         meteo = await con.prepare(
-"""INSERT INTO meteo_data (device_id, unix_timestamp, event_id, temp, pressure) VALUES ($1, $2, $3, $4, $5);""")
-    return pool, meteo
+            """INSERT INTO meteo_data (device_id, unix_timestamp, event_id, temp, pressure) VALUES ($1, $2, $3, $4, $5);""")
+    return meteo
+
+
+def thr(loop):
+    pass
 
 
 class ThingsResource:
     def __init__(self):
-        loop1 = asyncio.get_event_loop()
-        self.pool, self.meteo = loop1.run_until_complete(get_pool())
-        self.n = 0
-        self.count = 0
-        self.time = time.time()
+        self.loop1 = asyncio.get_event_loop()
+        self.meteo = self.loop1.run_until_complete(get_pool())
+        # self.n = 0
+        # self.count = 0
+        # self.time = time.time()
 
-    # @profile
+    @profile
     def on_post(self, req: Request, resp: Response):
-        self.n += 1
-        if self.n == 100:
-            self.count += self.n
-            start = time.time()
-            delt = start - self.time
-            self.time = start
-            print('p/s: {:.3f}  count: {}'.format(self.n / delt, self.count))
-            self.n = 0
+        # self.n += 1
+        # if self.n == 100:
+        #     self.count += self.n
+        #     start = time.time()
+        #     delt = start - self.time
+        #     self.time = start
+        #     print('p/s: {:.3f}  count: {}'.format(self.n / delt, self.count))
+        #     self.n = 0
         quer = req.bounded_stream.read().decode()
         fut = asyncio.ensure_future(main(quer, self.meteo))
-
         loop = asyncio.get_event_loop()
+
         loop.run_until_complete(fut)
 
         resp.body = "[OK]"
