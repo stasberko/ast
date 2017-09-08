@@ -27,18 +27,22 @@ async def main(key):
         """INSERT INTO meteo_data (device_id, unix_timestamp, event_id, temp, pressure) VALUES ($1, $2, $3, $4, $5);""")
     tr = conn.transaction()
     await tr.start()
-
+    start = time.time()
+    print('{:.3f}'.format(time.time()-start))
     try:
         for val in key.split():
-            await meteo.fetch(*list(map(int, val.split(','))))
+            await meteo.fetchrow(*list(map(int, val.split(','))))
+        print('{:.3f}'.format(time.time()-start))
     except:
         await tr.rollback()
         print("!!!!!!!!!!!!!!!!!roll trnasaction")
+        print('{:.3f}'.format(time.time() - start))
 
         raise
     finally:
         await tr.commit()
-        print("end trnasaction")
+        print('{:.3f}'.format(time.time() - start))
+
     await conn.close()
 
 
