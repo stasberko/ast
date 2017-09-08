@@ -71,45 +71,20 @@ async def insert(cursor, table="meteo_data", *args):
     return True
 
 
-# import psycopg2
-#
-# tables = 'obd_data', 'imu_data', 'meteo_data', 'gps_data'
-# plan_name = ("obd_plan", "imu_plan", "meteo_plan", "gps_plan")
-# conn = psycopg2.connect(dbname="test_db", user="suser", password="password", host="localhost", port="5432")
-# cur = conn.cursor()
-#
-# res = cur.execute(
-#     "PREPARE %s AS "
-#     "INSERT INTO meteo_data (device_id, unix_timestamp, event_id, temp, pressure) VALUES ($1, $2, $3, $4, $5);",
-#     ("weqw",))
-# print(res)
-#
-# # create_meteo_data(cur)
-# # insert(cur)
-# conn.commit()
-# cur.close()
-# conn.close()
-
-
-
 import asyncio
 import asyncpg
-import time
+
 
 
 async def main():
     conn = await asyncpg.connect(database="test05", user="test05", password="11111111", host="localhost", port="5432")
-    # await del_table(conn, "meteo_data")
+    await del_table(conn, "meteo_data")
     await create_meteo_data(conn)
     # await insert(conn)
     meteo = await conn.prepare(
         """INSERT INTO meteo_data (device_id, unix_timestamp, event_id, temp, pressure) VALUES ($1, $2, $3, $4, $5);""")
-    # await del_table(conn, 'meteo_data')
     await conn.close()
 
-
-# fut = asyncio.ensure_future(main())  # type : asyncio.Future
-# asyncio.get_event_loop().run_until_complete(fut)
-
-# asyncio.get_event_loop().run_until_complete(main())
-# print(time.time())
+if __name__ == '__main__':
+    fut = asyncio.ensure_future(main())  # type : asyncio.Future
+    asyncio.get_event_loop().run_until_complete(fut)
