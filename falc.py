@@ -19,37 +19,41 @@ def profile(func):
     return wrapper
 
 
-async def main(key, meteo):
-    # async with pool.acquire() as con:
+async def main(key):
     # await del_table(con, "meteo_data")
     # await create_meteo_data(con)
-    for val in key.split():
-        await meteo.fetch(*list(map(int, val.split(','))))
+    conn = await asyncpg.connect(database="test05", user="test05", password="11111111", host="localhost", port="5432")
+    meteo = await conn.prepare(
+        """INSERT INTO meteo_data (device_id, unix_timestamp, event_id, temp, pressure) VALUES ($1, $2, $3, $4, $5);""")
+    tr = conn.transaction()
+    await tr.start()
 
+    try:
+        for val in key.split():
+            await meteo.fetch(*list(map(int, val.split(','))))
+    except:
+        await tr.rollback()
+        print("!!!!!!!!!!!!!!!!!roll trnasaction")
 
-async def get_pool():
-    pool = await asyncpg.create_pool(database="test05", user="test05", password="11111111", host="localhost",
-                                     port="5432")
-    async with pool.acquire() as con:
-        meteo = await con.prepare(
-            """INSERT INTO meteo_data (device_id, unix_timestamp, event_id, temp, pressure) VALUES ($1, $2, $3, $4, $5);""")
-    return meteo
-
-
-def thr(loop):
-    pass
+        raise
+    finally:
+        await tr.commit()
+        print("end trnasaction")
+    await conn.close()
 
 
 class ThingsResource:
     def __init__(self):
-        self.loop1 = asyncio.get_event_loop()
-        self.meteo = self.loop1.run_until_complete(get_pool())
-        # self.n = 0
-        # self.count = 0
-        # self.time = time.time()
+        pass
+        # self.loop1 = asyncio.get_event_loop()
+        # self.meteo = self.loop1.run_until_complete(get_pool())
+        self.n = 0
+        self.count = 0
+        self.time = time.time()
 
-    @profile
+    # @profile
     def on_post(self, req: Request, resp: Response):
+        print(time.time())
         # self.n += 1
         # if self.n == 100:
         #     self.count += self.n
@@ -58,14 +62,17 @@ class ThingsResource:
         #     self.time = start
         #     print('p/s: {:.3f}  count: {}'.format(self.n / delt, self.count))
         #     self.n = 0
+
         quer = req.bounded_stream.read().decode()
-        fut = asyncio.ensure_future(main(quer, self.meteo))
+        fut = asyncio.ensure_future(main(quer))
         loop = asyncio.get_event_loop()
 
         loop.run_until_complete(fut)
+        print(time.time())
 
         resp.body = "[OK]"
         resp.status = falcon.HTTP_200
+        print(time.time())
 
 
 app = falcon.API()
